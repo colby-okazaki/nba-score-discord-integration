@@ -1,3 +1,6 @@
+.env
+venv/
+__pycache__/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -5,8 +8,6 @@ __pycache__/
 
 # C extensions
 *.so
-
-.env
 
 
 # Distribution / packaging
