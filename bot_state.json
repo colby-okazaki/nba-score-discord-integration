@@ -1208,6 +1208,24 @@
     },
     "401909896": {
       "slate_date": "20261031",
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
+      "snapshot": {
+        "period": 4,
+        "state": "post",
+        "is_final": true,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_FINAL"
+      }
+    },
+    "401909897": {
+      "slate_date": "20261031",
       "posted": [],
       "snapshot": {
         "period": 4,
@@ -1218,64 +1236,54 @@
         "status_name": "STATUS_IN_PROGRESS"
       }
     },
-    "401909897": {
-      "slate_date": "20261031",
-      "posted": [],
-      "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
-        "is_break": false,
-        "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
-      }
-    },
     "401909898": {
       "slate_date": "20261031",
-      "posted": [],
+      "posted": [
+        "2"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 2,
+        "state": "in",
         "is_final": false,
-        "is_break": false,
-        "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "is_break": true,
+        "is_halftime": true,
+        "status_name": "STATUS_HALFTIME"
       }
     },
     "401909899": {
       "slate_date": "20261031",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 1,
+        "state": "in",
         "is_final": false,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_IN_PROGRESS"
       }
     },
     "401909900": {
       "slate_date": "20261031",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 1,
+        "state": "in",
         "is_final": false,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_IN_PROGRESS"
       }
     },
     "401909901": {
       "slate_date": "20261031",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 1,
+        "state": "in",
         "is_final": false,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_IN_PROGRESS"
       }
     },
     "401909902": {
