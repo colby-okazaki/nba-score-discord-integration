@@ -1841,6 +1841,30 @@
         "is_halftime": false,
         "status_name": "STATUS_SCHEDULED"
       }
+    },
+    "401909936": {
+      "slate_date": "20261105",
+      "posted": [],
+      "snapshot": {
+        "period": 0,
+        "state": "pre",
+        "is_final": false,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_SCHEDULED"
+      }
+    },
+    "401909937": {
+      "slate_date": "20261105",
+      "posted": [],
+      "snapshot": {
+        "period": 0,
+        "state": "pre",
+        "is_final": false,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_SCHEDULED"
+      }
     }
   },
   "dates": {
