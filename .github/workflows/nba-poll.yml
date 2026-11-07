@@ -1,8 +1,14 @@
 name: NBA score poll
 
+# Each run stays alive (up to ~5.5h) and checks every game about one average
+# game length after tip-off, posting final scores. If a check is still coming
+# up when time runs out, the run starts a fresh run to take over. The cron
+# times below are just starting points / backups (GitHub may run them late).
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "0 15 * * *" # 10-11am ET: posts the day's schedule
+    - cron: "0 21 * * *"
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -12,9 +18,10 @@ concurrency:
 jobs:
   poll:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 355
     permissions:
       contents: write
+      actions: write
     steps:
       # Check out the branch tip (not the trigger commit) so a queued run
       # always starts from the latest saved bot_state.json.
@@ -31,13 +38,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Check games
+      - name: Watch games
+        timeout-minutes: 340
         env:
           TOKEN: ${{ secrets.DISCORD_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
-        run: python nba_score_bot.py --once
+        run: python nba_score_bot.py
 
-      # Save state even if the poll errored part-way, so posted alerts
+      # Save state even if the watch errored part-way, so posted alerts
       # are never re-sent on the next run.
       - name: Save bot state
         if: always()
@@ -52,3 +60,9 @@ jobs:
             git pull --rebase
             git push
           fi
+
+      - name: Hand off to a fresh run
+        if: always() && hashFiles('.redispatch') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run nba-poll.yml --ref "${{ github.event.repository.default_branch }}"

@@ -1,6 +1,7 @@
 # nba_score_bot.py
 import argparse
 import asyncio
+import io
 import json
 import os
 from dataclasses import asdict, dataclass, field
@@ -11,7 +12,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 import discord
-from discord.ext import tasks
+from PIL import Image, ImageDraw, ImageFont
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -27,13 +28,21 @@ if not CHANNEL_ID:
 ESPN_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
 ESPN_SUMMARY = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event="
 ET = ZoneInfo("America/New_York")
-POLL_SECONDS = 15 * 60
 EXPIRED_CLOCKS = {"0.0", "0:00", "00:00", "0.00"}
 STATE_PATH = Path(__file__).resolve().parent / "bot_state.json"
-BACKFILL_DATE = "20261022"
 LOCK_KEYS = ("1", "2", "3", "4", "final")
-# Only post halftime and final alerts.
-ALERT_KEYS = {"2", "final"}
+# Only final scores are posted. Each game is first checked about one average
+# NBA game length after tip-off, then every few minutes until it goes final.
+GAME_LENGTH = timedelta(hours=2, minutes=15)
+RECHECK_EVERY = timedelta(minutes=5)
+# Never post a final for a game that tipped off longer ago than this.
+FINAL_WINDOW = timedelta(hours=12)
+# Each GitHub run: how long it stays alive, how far ahead it will wait for
+# the next check, and how often it refreshes ESPN while waiting.
+WATCH_MAX = timedelta(hours=5, minutes=30)
+HANDOFF_WINDOW = timedelta(hours=6)
+WATCH_REFRESH = timedelta(minutes=30)
+REDISPATCH_FLAG = Path(__file__).resolve().parent / ".redispatch"
 CLOSED_STATUS_NAMES = {
     "STATUS_FINAL",
     "STATUS_POSTPONED",
@@ -51,7 +60,6 @@ AWARDS = (
 
 intents = discord.Intents.default()
 bot = discord.Client(intents=intents)
-startup_sync_done = False
 
 
 @dataclass
@@ -290,41 +298,30 @@ def event_is_closed(event: dict) -> bool:
     return snap.is_final or snap.status_name in CLOSED_STATUS_NAMES
 
 
-def _quarter_key(period: int, is_halftime: bool = False) -> Optional[str]:
-    if period <= 0:
+def tip_time(event: dict) -> Optional[datetime]:
+    try:
+        return datetime.fromisoformat(str(event.get("date")).replace("Z", "+00:00"))
+    except Exception:
         return None
-    if period == 2 or is_halftime:
-        return "2"
-    if period >= 5:
-        return f"ot{period}"
-    return str(period)
 
 
-def alerts_for_transition(prev: Optional[GameSnapshot], curr: GameSnapshot) -> List[str]:
-    """
-    Return alert keys for quarters this game just finished since the last poll.
-    First time we see a game, return nothing so already-finished games are ignored.
-    """
-    if prev is None or curr.state == "pre":
-        return []
-
-    alerts: List[str] = []
-
-    if curr.is_final and not prev.is_final:
-        alerts.append("final")
-
-    if curr.period > prev.period and prev.period >= 1:
-        for q in range(prev.period, curr.period):
-            key = _quarter_key(q)
-            if key and key not in alerts:
-                alerts.append(key)
-
-    if curr.is_break and not prev.is_break and not curr.is_final:
-        key = _quarter_key(curr.period, is_halftime=curr.is_halftime)
-        if key and key not in alerts:
-            alerts.append(key)
-
-    return alerts
+def next_check_time(slates: Dict[str, List[dict]]) -> Optional[datetime]:
+    """When the next unfinished game should be checked for a final score."""
+    now = datetime.now(ET)
+    best: Optional[datetime] = None
+    for events in slates.values():
+        for event in events:
+            if event_is_closed(event):
+                continue
+            tip = tip_time(event)
+            if tip is None:
+                continue
+            due = tip + GAME_LENGTH
+            if due <= now:
+                due = now + RECHECK_EVERY
+            if best is None or due < best:
+                best = due
+    return best
 
 
 def get_home_away_from_event(event: dict):
@@ -334,36 +331,12 @@ def get_home_away_from_event(event: dict):
     return away, home
 
 
-def _score_through_period(competitor: dict, period: int) -> Optional[int]:
-    """Score at the end of `period`, from ESPN linescores. None if not available yet."""
-    lines = competitor.get("linescores") or []
-    if len(lines) < period:
-        return None
-    try:
-        return sum(int(float(line.get("value") or 0)) for line in lines[:period])
-    except Exception:
-        return None
-
-
-def _alert_period(alert_key: str) -> Optional[int]:
-    if alert_key.startswith("ot"):
-        alert_key = alert_key[2:]
-    return int(alert_key) if alert_key.isdigit() else None
-
-
-def format_score_line_from_event(event: dict, alert_key: Optional[str] = None) -> str:
+def format_score_line_from_event(event: dict) -> str:
     away, home = get_home_away_from_event(event)
     away_team = away["team"]["displayName"]
     home_team = home["team"]["displayName"]
     away_score = away.get("score", "0")
     home_score = home.get("score", "0")
-    # If we noticed the break late, show the score as of the end of that quarter.
-    period = _alert_period(alert_key) if alert_key else None
-    if period:
-        away_q = _score_through_period(away, period)
-        home_q = _score_through_period(home, period)
-        if away_q is not None and home_q is not None:
-            away_score, home_score = away_q, home_q
     return f"{away_team} {away_score} – {home_team} {home_score}"
 
 
@@ -674,6 +647,110 @@ def embed_schedule(date_label: str, events: List[dict]) -> discord.Embed:
     )
 
 
+FONT_PATHS = (
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # GitHub Actions (Ubuntu)
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",  # macOS
+    "C:/Windows/Fonts/arialbd.ttf",
+)
+_logo_cache: Dict[str, Optional[Image.Image]] = {}
+
+
+def _font(size: int) -> ImageFont.ImageFont:
+    for path in FONT_PATHS:
+        if os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    return ImageFont.load_default(size=size)
+
+
+def _fit_font(draw: ImageDraw.ImageDraw, text: str, size: int, max_width: int) -> ImageFont.ImageFont:
+    font = _font(size)
+    while size > 20 and draw.textlength(text, font=font) > max_width:
+        size -= 2
+        font = _font(size)
+    return font
+
+
+def _team_logo(url: Optional[str], size: int) -> Optional[Image.Image]:
+    if not url:
+        return None
+    if url not in _logo_cache:
+        try:
+            r = requests.get(url, timeout=10)
+            r.raise_for_status()
+            _logo_cache[url] = Image.open(io.BytesIO(r.content)).convert("RGBA")
+        except Exception as e:
+            print("Logo fetch error:", e, flush=True)
+            _logo_cache[url] = None
+    logo = _logo_cache[url]
+    if logo is None:
+        return None
+    logo = logo.copy()
+    logo.thumbnail((size, size))
+    return logo
+
+
+def _tip_label(event: dict) -> str:
+    tip = tip_time(event)
+    if tip is None:
+        return "TBD"
+    return tip.astimezone(ET).strftime("%I:%M %p").lstrip("0")
+
+
+def _broadcast_label(event: dict) -> str:
+    names: List[str] = []
+    for b in (event.get("competitions") or [{}])[0].get("broadcasts") or []:
+        for name in b.get("names") or []:
+            if name not in names:
+                names.append(name)
+    return " · ".join(names[:2])
+
+
+def render_schedule_image(events: List[dict]) -> io.BytesIO:
+    """A schedule card with team logos and large text, sized for Discord."""
+    width, margin, row_h, gap, top = 1200, 32, 150, 16, 90
+    height = top + len(events) * (row_h + gap) + margin - gap
+    img = Image.new("RGB", (width, height), (17, 24, 39))
+    draw = ImageDraw.Draw(img)
+
+    count = f"{len(events)} GAME{'S' if len(events) != 1 else ''}  ·  ALL TIMES ET"
+    draw.text((margin + 8, top // 2), count, font=_font(34), fill=(209, 213, 219), anchor="lm")
+
+    logo_size = 96
+    for i, event in enumerate(sorted(events, key=lambda e: str(e.get("date")))):
+        y = top + i * (row_h + gap)
+        mid = y + row_h // 2
+        draw.rounded_rectangle((margin, y, width - margin, y + row_h), radius=24, fill=(255, 255, 255))
+        away, home = get_home_away_from_event(event)
+
+        for team, x in ((away, margin + 28), (home, 560)):
+            info = team.get("team") or {}
+            logo = _team_logo(info.get("logo"), logo_size)
+            if logo:
+                img.paste(logo, (x + (logo_size - logo.width) // 2, mid - logo.height // 2), logo)
+            name = info.get("shortDisplayName") or info.get("displayName") or "?"
+            draw.text((x + logo_size + 18, mid - 8), name, font=_fit_font(draw, name, 46, 225),
+                      fill=(17, 24, 39), anchor="ls")
+            record = ((team.get("records") or [{}])[0]).get("summary") or ""
+            if record:
+                draw.text((x + logo_size + 18, mid + 12), record, font=_font(28),
+                          fill=(107, 114, 128), anchor="lt")
+
+        neutral = bool((event.get("competitions") or [{}])[0].get("neutralSite"))
+        draw.text((520, mid), "vs" if neutral else "@", font=_font(40), fill=(156, 163, 175), anchor="mm")
+
+        right = width - margin - 28
+        draw.text((right, mid - 6), _tip_label(event), font=_font(46), fill=(17, 24, 39), anchor="rs")
+        tv = _broadcast_label(event)
+        if tv:
+            draw.text((right, mid + 14), tv, font=_fit_font(draw, tv, 26, 260),
+                      fill=(107, 114, 128), anchor="rt")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+
 async def send_alert(channel, event: dict, event_id: str, alert_key: str, summary: Optional[dict] = None) -> None:
     if summary is None:
         summary = fetch_summary(event_id)
@@ -681,7 +758,7 @@ async def send_alert(channel, event: dict, event_id: str, alert_key: str, summar
     score_line = (
         get_score_line_from_summary(summary)
         if alert_key == "final"
-        else format_score_line_from_event(event, alert_key)
+        else format_score_line_from_event(event)
     )
     thumb = thumbnail_for_alert(summary, alert_key)
     await channel.send(
@@ -689,21 +766,6 @@ async def send_alert(channel, event: dict, event_id: str, alert_key: str, summar
             alert_key, score_line, away_leader, home_leader, thumb, summary=summary
         )
     )
-
-
-async def get_target_channel():
-    channel = bot.get_channel(CHANNEL_ID)
-    if channel is None:
-        channel = await bot.fetch_channel(CHANNEL_ID)
-    return channel
-
-
-def seed_slate(yyyymmdd: str, events: List[dict], overwrite: bool = False) -> None:
-    """Attach games to a slate date. overwrite=True syncs live ESPN state without replaying alerts."""
-    for event in events:
-        rec = game_record(str(event["id"]), yyyymmdd)
-        if rec.snapshot is None or overwrite:
-            rec.snapshot = snapshot_event(event)
 
 
 def earliest_unfinished_slate(slates: Dict[str, List[dict]]) -> Optional[str]:
@@ -724,7 +786,13 @@ async def maybe_post_next_schedule(channel, slates: Dict[str, List[dict]]) -> No
     flags = date_flags(yyyymmdd)
     if flags.schedule_posted:
         return
-    await channel.send(embed=embed_schedule(slate_label(yyyymmdd), events))
+    heading = f"# 📅 NBA Schedule — {slate_label(yyyymmdd)}"
+    try:
+        image = render_schedule_image(events)
+        await channel.send(heading, file=discord.File(image, filename="nba-schedule.png"))
+    except Exception as e:
+        print("Schedule image error, sending text instead:", e, flush=True)
+        await channel.send(embed=embed_schedule(slate_label(yyyymmdd), events))
     flags.schedule_posted = True
     print(f"Posted schedule for {yyyymmdd} ({len(events)} games)", flush=True)
 
@@ -758,146 +826,78 @@ async def maybe_send_nightly_summary(channel, yyyymmdd: str, events: List[dict])
     print(f"Posted nightly recap for {yyyymmdd}", flush=True)
 
 
-async def backfill_date(channel, yyyymmdd: str, events: List[dict]) -> None:
-    flags = date_flags(yyyymmdd)
-    if flags.backfilled:
-        return
-    for event in events:
-        event_id = str(event["id"])
-        rec = game_record(event_id, yyyymmdd)
-        rec.snapshot = snapshot_event(event)
-        if not rec.snapshot.is_final:
-            lock_game(event_id)
-            continue
-        if "final" in rec.posted:
-            lock_game(event_id)
-            continue
-        try:
-            await send_alert(channel, event, event_id, "final")
-            lock_game(event_id)
-            print(f"Backfilled {yyyymmdd} final: {event.get('shortName')}", flush=True)
-        except Exception as e:
-            print(f"Backfill send error ({event_id}):", e, flush=True)
-            return
-    flags.backfilled = True
-
-
-async def process_slate(channel, yyyymmdd: str, events: List[dict], send_quarters: bool) -> None:
+async def process_slate(channel, yyyymmdd: str, events: List[dict], post_finals: bool) -> None:
+    now = datetime.now(ET)
     for event in events:
         event_id = str(event["id"])
         rec = game_record(event_id, yyyymmdd)
         curr = snapshot_event(event)
-
-        if not send_quarters:
-            if rec.snapshot is None:
-                rec.snapshot = curr
-            continue
-
-        if "final" in rec.posted and curr.is_final:
-            rec.snapshot = curr
-            continue
-
-        prev = rec.snapshot
         rec.snapshot = curr
 
-        for alert_key in alerts_for_transition(prev, curr):
-            if alert_key not in ALERT_KEYS or alert_key in rec.posted:
-                continue
-            try:
-                summary = fetch_summary(event_id)
-            except Exception:
-                continue
-            rec.posted.add(alert_key)
-            try:
-                await send_alert(channel, event, event_id, alert_key, summary)
-            except Exception as e:
-                print("Send error:", e, flush=True)
-                rec.posted.discard(alert_key)
-                continue
-            if alert_key == "final":
-                lock_game(event_id)
+        if not post_finals or not curr.is_final or "final" in rec.posted:
+            continue
+        tip = tip_time(event)
+        if tip is None or now - tip > FINAL_WINDOW:
+            # Too old to be news; mark it so it is never posted late.
+            lock_game(event_id)
+            continue
+        try:
+            await send_alert(channel, event, event_id, "final")
+        except Exception as e:
+            print(f"Final send error ({event_id}):", e, flush=True)
+            continue
+        lock_game(event_id)
+        print(f"Posted final: {event.get('shortName')}", flush=True)
 
 
-async def startup_sync(channel) -> None:
-    today = datetime.now(ET).strftime("%Y%m%d")
-    slates = {day: events_for_date(day) for day in watch_dates()}
-
-    if BACKFILL_DATE in slates:
-        await backfill_date(channel, BACKFILL_DATE, slates[BACKFILL_DATE])
-
-    for yyyymmdd, events in slates.items():
-        seed_slate(yyyymmdd, events, overwrite=True)
-        if yyyymmdd == BACKFILL_DATE:
-            for event in events:
-                lock_game(str(event["id"]))
-        # Only recap dates that are today or earlier so we don't wait on tomorrow's slate.
-        if yyyymmdd <= today:
-            await maybe_send_nightly_summary(channel, yyyymmdd, events)
-    await maybe_post_next_schedule(channel, slates)
-
-    save_state()
-
-
-async def run_poll(channel) -> None:
+async def run_poll(channel) -> Dict[str, List[dict]]:
     today = datetime.now(ET).strftime("%Y%m%d")
     slates = {day: events_for_date(day) for day in watch_dates()}
     for yyyymmdd, events in slates.items():
-        send_quarters = yyyymmdd <= today
-        await process_slate(channel, yyyymmdd, events, send_quarters=send_quarters)
-        if send_quarters:
+        post_finals = yyyymmdd <= today
+        await process_slate(channel, yyyymmdd, events, post_finals=post_finals)
+        if post_finals:
             await maybe_send_nightly_summary(channel, yyyymmdd, events)
     await maybe_post_next_schedule(channel, slates)
     save_state()
+    return slates
 
 
-@tasks.loop(seconds=POLL_SECONDS)
-async def poll_games():
-    channel = await get_target_channel()
-    if not channel:
-        return
-    await run_poll(channel)
-
-
-@bot.event
-async def on_ready():
-    global startup_sync_done
-    print(f"Logged in as {bot.user}", flush=True)
+async def run_watch() -> None:
+    """
+    Stay alive and check each game about GAME_LENGTH after tip-off, until
+    WATCH_MAX runs out. If a check is still coming up, leave REDISPATCH_FLAG
+    so the workflow can start a fresh run to take over.
+    """
     load_state()
-
-    if not startup_sync_done:
-        channel = await get_target_channel()
-        if channel:
-            await startup_sync(channel)
-        startup_sync_done = True
-
-    if not poll_games.is_running():
-        poll_games.start()
-
-
-async def run_once() -> None:
-    load_state()
+    REDISPATCH_FLAG.unlink(missing_ok=True)
+    deadline = datetime.now(ET) + WATCH_MAX
     await bot.login(TOKEN)
     try:
         channel = await bot.fetch_channel(CHANNEL_ID)
-        print(f"One-shot poll as {bot.user}", flush=True)
-        await run_poll(channel)
+        print(f"Watching as {bot.user} until {deadline:%H:%M} ET", flush=True)
+        while True:
+            slates = await run_poll(channel)
+            due = next_check_time(slates)
+            now = datetime.now(ET)
+            if due is None or due > deadline + HANDOFF_WINDOW:
+                print("No games to check soon; exiting", flush=True)
+                return
+            wake = min(due, now + WATCH_REFRESH)
+            if wake >= deadline:
+                REDISPATCH_FLAG.touch()
+                print(f"Next check at {due:%H:%M} ET; handing off to a new run", flush=True)
+                return
+            print(f"Next check at {due:%H:%M} ET", flush=True)
+            await asyncio.sleep(max(0.0, (wake - now).total_seconds()))
     finally:
         await bot.close()
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--once",
-        action="store_true",
-        help="Check ESPN once, post any new alerts, then exit",
-    )
-    args = parser.parse_args()
-    if args.once:
-        asyncio.run(run_once())
-        return
-    load_state()
-    bot.run(TOKEN)
+    # Runs on GitHub Actions (.github/workflows/nba-poll.yml).
+    argparse.ArgumentParser(description="Post NBA final scores and schedules to Discord").parse_args()
+    asyncio.run(run_watch())
 
 
 if __name__ == "__main__":
