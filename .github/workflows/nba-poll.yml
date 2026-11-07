@@ -6,7 +6,9 @@ name: NBA score poll
 # times below are just starting points / backups (GitHub may run them late).
 on:
   schedule:
-    - cron: "0 15 * * *" # 10-11am ET: posts the day's schedule
+    # 7-8am Pacific: the run waits and posts the schedule at 9am Pacific.
+    - cron: "0 15 * * *"
+    - cron: "0 16 * * *" # backup in case the 15:00 run is late or skipped
     - cron: "0 21 * * *"
     - cron: "0 3 * * *"
   workflow_dispatch:

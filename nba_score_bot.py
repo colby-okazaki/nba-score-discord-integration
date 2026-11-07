@@ -28,6 +28,9 @@ if not CHANNEL_ID:
 ESPN_SCOREBOARD = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard"
 ESPN_SUMMARY = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event="
 ET = ZoneInfo("America/New_York")
+PT = ZoneInfo("America/Los_Angeles")
+# The day's schedule is posted at this hour, Pacific time.
+SCHEDULE_HOUR_PT = 9
 EXPIRED_CLOCKS = {"0.0", "0:00", "00:00", "0.00"}
 STATE_PATH = Path(__file__).resolve().parent / "bot_state.json"
 LOCK_KEYS = ("1", "2", "3", "4", "final")
@@ -305,10 +308,21 @@ def tip_time(event: dict) -> Optional[datetime]:
         return None
 
 
+def schedule_post_time(yyyymmdd: str) -> datetime:
+    day = datetime.strptime(yyyymmdd, "%Y%m%d")
+    return day.replace(hour=SCHEDULE_HOUR_PT, tzinfo=PT)
+
+
 def next_check_time(slates: Dict[str, List[dict]]) -> Optional[datetime]:
-    """When the next unfinished game should be checked for a final score."""
+    """When the next schedule post or final-score check is due."""
     now = datetime.now(ET)
     best: Optional[datetime] = None
+    today_pt = now.astimezone(PT).strftime("%Y%m%d")
+    for yyyymmdd, events in slates.items():
+        if events and yyyymmdd >= today_pt and not date_flags(yyyymmdd).schedule_posted:
+            due = max(schedule_post_time(yyyymmdd), now)
+            if best is None or due < best:
+                best = due
     for events in slates.values():
         for event in events:
             if event_is_closed(event):
@@ -768,23 +782,13 @@ async def send_alert(channel, event: dict, event_id: str, alert_key: str, summar
     )
 
 
-def earliest_unfinished_slate(slates: Dict[str, List[dict]]) -> Optional[str]:
-    """The next NBA night still in progress or not started. Never skip ahead a day."""
-    for yyyymmdd in sorted(slates):
-        events = slates.get(yyyymmdd) or []
-        if events and not all(event_is_closed(event) for event in events):
-            return yyyymmdd
-    return None
-
-
-async def maybe_post_next_schedule(channel, slates: Dict[str, List[dict]]) -> None:
-    """Post the schedule only for the current NBA night, after the previous day's results."""
-    yyyymmdd = earliest_unfinished_slate(slates)
-    if not yyyymmdd:
-        return
-    events = slates[yyyymmdd]
+async def maybe_post_schedule(channel, slates: Dict[str, List[dict]]) -> None:
+    """Post today's schedule once it is SCHEDULE_HOUR_PT in Pacific time."""
+    now_pt = datetime.now(PT)
+    yyyymmdd = now_pt.strftime("%Y%m%d")
+    events = slates.get(yyyymmdd) or []
     flags = date_flags(yyyymmdd)
-    if flags.schedule_posted:
+    if not events or flags.schedule_posted or now_pt < schedule_post_time(yyyymmdd):
         return
     heading = f"# 📅 NBA Schedule — {slate_label(yyyymmdd)}"
     try:
@@ -858,7 +862,7 @@ async def run_poll(channel) -> Dict[str, List[dict]]:
         await process_slate(channel, yyyymmdd, events, post_finals=post_finals)
         if post_finals:
             await maybe_send_nightly_summary(channel, yyyymmdd, events)
-    await maybe_post_next_schedule(channel, slates)
+    await maybe_post_schedule(channel, slates)
     save_state()
     return slates
 
