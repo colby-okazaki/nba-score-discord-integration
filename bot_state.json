@@ -2987,6 +2987,66 @@
         "is_halftime": false,
         "status_name": "STATUS_SCHEDULED"
       }
+    },
+    "401909980": {
+      "slate_date": "20261114",
+      "posted": [],
+      "snapshot": {
+        "period": 0,
+        "state": "pre",
+        "is_final": false,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_SCHEDULED"
+      }
+    },
+    "401909981": {
+      "slate_date": "20261114",
+      "posted": [],
+      "snapshot": {
+        "period": 0,
+        "state": "pre",
+        "is_final": false,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_SCHEDULED"
+      }
+    },
+    "401909982": {
+      "slate_date": "20261114",
+      "posted": [],
+      "snapshot": {
+        "period": 0,
+        "state": "pre",
+        "is_final": false,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_SCHEDULED"
+      }
+    },
+    "401909983": {
+      "slate_date": "20261114",
+      "posted": [],
+      "snapshot": {
+        "period": 0,
+        "state": "pre",
+        "is_final": false,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_SCHEDULED"
+      }
+    },
+    "401909984": {
+      "slate_date": "20261114",
+      "posted": [],
+      "snapshot": {
+        "period": 0,
+        "state": "pre",
+        "is_final": false,
+        "is_break": false,
+        "is_halftime": false,
+        "status_name": "STATUS_SCHEDULED"
+      }
     }
   },
   "dates": {
@@ -3101,6 +3161,11 @@
       "backfilled": false
     },
     "20261113": {
+      "schedule_posted": false,
+      "summary_posted": false,
+      "backfilled": false
+    },
+    "20261114": {
       "schedule_posted": false,
       "summary_posted": false,
       "backfilled": false
