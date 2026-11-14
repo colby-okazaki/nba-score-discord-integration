@@ -2,7 +2,16 @@
 
 A Discord bot that posts NBA final scores, a nightly recap, and a daily schedule card with team logos, using data from ESPN's public API. It runs entirely on GitHub Actions, so there is no server to host.
 
-![Example schedule post](docs/schedule-example.png)
+<table>
+  <tr>
+    <th>Daily schedule</th>
+    <th>Final score</th>
+  </tr>
+  <tr>
+    <td><img src="docs/schedule-example.png" alt="Example schedule post" width="420"></td>
+    <td><img src="docs/final-score-example.png" alt="Example final score post" width="420"></td>
+  </tr>
+</table>
 
 ## What it posts
 
