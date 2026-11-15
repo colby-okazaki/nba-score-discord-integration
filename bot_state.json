@@ -3134,14 +3134,20 @@
     },
     "401909985": {
       "slate_date": "20261115",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909986": {
@@ -3459,7 +3465,7 @@
       "backfilled": false
     },
     "20261115": {
-      "schedule_posted": false,
+      "schedule_posted": true,
       "summary_posted": false,
       "backfilled": false
     },
