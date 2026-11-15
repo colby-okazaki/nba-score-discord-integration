@@ -3046,12 +3046,12 @@
       "slate_date": "20261114",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 1,
+        "state": "in",
         "is_final": false,
-        "is_break": false,
+        "is_break": true,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_END_PERIOD"
       }
     },
     "401909981": {
