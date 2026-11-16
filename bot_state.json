@@ -3242,38 +3242,56 @@
     },
     "401909991": {
       "slate_date": "20261115",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 3,
-        "state": "in",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_IN_PROGRESS"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909992": {
       "slate_date": "20261115",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 2,
-        "state": "in",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_IN_PROGRESS"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909993": {
       "slate_date": "20261115",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909994": {
@@ -3496,7 +3514,7 @@
     },
     "20261115": {
       "schedule_posted": true,
-      "summary_posted": false,
+      "summary_posted": true,
       "backfilled": false
     },
     "20261116": {
