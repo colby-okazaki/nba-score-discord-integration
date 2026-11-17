@@ -3350,14 +3350,20 @@
     },
     "401909997": {
       "slate_date": "20261116",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
         "period": 4,
-        "state": "in",
-        "is_final": false,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_IN_PROGRESS"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909998": {
@@ -3380,38 +3386,56 @@
     },
     "401909999": {
       "slate_date": "20261116",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
         "period": 4,
-        "state": "in",
-        "is_final": false,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_IN_PROGRESS"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401910000": {
       "slate_date": "20261116",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 3,
-        "state": "in",
-        "is_final": false,
-        "is_break": true,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
+        "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_END_PERIOD"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401910001": {
       "slate_date": "20261116",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 2,
-        "state": "in",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_IN_PROGRESS"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401910002": {
@@ -3603,7 +3627,7 @@
     },
     "20261116": {
       "schedule_posted": true,
-      "summary_posted": false,
+      "summary_posted": true,
       "backfilled": false
     },
     "20261117": {
