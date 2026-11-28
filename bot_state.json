@@ -4610,134 +4610,176 @@
     },
     "401909326": {
       "slate_date": "20261127",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909327": {
       "slate_date": "20261127",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909328": {
       "slate_date": "20261127",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909329": {
       "slate_date": "20261127",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909330": {
       "slate_date": "20261127",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909331": {
       "slate_date": "20261127",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909332": {
       "slate_date": "20261127",
-      "posted": [],
+      "posted": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "final"
+      ],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
-        "is_final": false,
+        "period": 4,
+        "state": "post",
+        "is_final": true,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_FINAL"
       }
     },
     "401909333": {
       "slate_date": "20261127",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 4,
+        "state": "in",
         "is_final": false,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_IN_PROGRESS"
       }
     },
     "401909334": {
       "slate_date": "20261127",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 4,
+        "state": "in",
         "is_final": false,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_IN_PROGRESS"
       }
     },
     "401909335": {
       "slate_date": "20261127",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 4,
+        "state": "in",
         "is_final": false,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_IN_PROGRESS"
       }
     },
     "401909336": {
       "slate_date": "20261127",
       "posted": [],
       "snapshot": {
-        "period": 0,
-        "state": "pre",
+        "period": 4,
+        "state": "in",
         "is_final": false,
         "is_break": false,
         "is_halftime": false,
-        "status_name": "STATUS_SCHEDULED"
+        "status_name": "STATUS_IN_PROGRESS"
       }
     },
     "401910046": {
